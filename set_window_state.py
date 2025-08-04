@@ -7,9 +7,10 @@ import sys
 import sqlite3
 import os
 from datetime import datetime
+from typing import List
 from dotenv import load_dotenv
 
-def main():
+def main() -> None:
     load_dotenv()
     db_path = os.getenv('DATABASE_PATH', 'temperature_checker.db')
     
@@ -50,7 +51,7 @@ def main():
         print(f"Error: {e}")
         sys.exit(1)
 
-def show_status(conn):
+def show_status(conn: sqlite3.Connection) -> None:
     """Show current application status"""
     cursor = conn.execute("""
         SELECT window_state, mode, last_notification_type, last_notification_time, updated_at
@@ -96,7 +97,7 @@ def show_status(conn):
             status = "✓" if notif[3] else "✗"
             print(f"  {notif[0]}: {notif[1]} at {notif[2]}°F {status}")
 
-def set_window_state(conn, state):
+def set_window_state(conn: sqlite3.Connection, state: str) -> None:
     """Set window state"""
     conn.execute("""
         UPDATE app_state 
@@ -106,7 +107,7 @@ def set_window_state(conn, state):
     conn.commit()
     print(f"Window state set to: {state}")
 
-def set_mode(conn, mode):
+def set_mode(conn: sqlite3.Connection, mode: str) -> None:
     """Set operating mode"""
     conn.execute("""
         UPDATE app_state 
@@ -116,7 +117,7 @@ def set_mode(conn, mode):
     conn.commit()
     print(f"Mode set to: {mode}")
 
-def reset_notification_state(conn):
+def reset_notification_state(conn: sqlite3.Connection) -> None:
     """Reset notification state to allow immediate notifications"""
     conn.execute("""
         UPDATE app_state 

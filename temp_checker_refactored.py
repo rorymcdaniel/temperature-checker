@@ -42,12 +42,12 @@ class DatabaseInterface(Protocol):
     """Protocol for database operations"""
     def init_database(self, schema_path: str) -> None: ...
     def get_app_state(self) -> AppState: ...
-    def update_app_state(self, window_state: str = None, mode: str = None, 
-                        last_notification_type: str = None) -> None: ...
+    def update_app_state(self, window_state: Optional[str] = None, mode: Optional[str] = None, 
+                        last_notification_type: Optional[str] = None) -> None: ...
     def record_temperature(self, weather_data: WeatherData, zip_code: str) -> None: ...
     def record_notification(self, notification_type: str, current_temp: float,
                           forecast_high: float, forecast_low: float, 
-                          message: str, sent_successfully: bool, error_message: str = None) -> None: ...
+                          message: str, sent_successfully: bool, error_message: Optional[str] = None) -> None: ...
 
 class WeatherInterface(Protocol):
     """Protocol for weather data fetching"""
@@ -103,8 +103,8 @@ class DatabaseAdapter:
                     last_notification_time=None
                 )
     
-    def update_app_state(self, window_state: str = None, mode: str = None, 
-                        last_notification_type: str = None) -> None:
+    def update_app_state(self, window_state: Optional[str] = None, mode: Optional[str] = None, 
+                        last_notification_type: Optional[str] = None) -> None:
         """Update application state in database"""
         with sqlite3.connect(self.db_path) as conn:
             updates = []
@@ -146,7 +146,7 @@ class DatabaseAdapter:
     
     def record_notification(self, notification_type: str, current_temp: float,
                           forecast_high: float, forecast_low: float, 
-                          message: str, sent_successfully: bool, error_message: str = None) -> None:
+                          message: str, sent_successfully: bool, error_message: Optional[str] = None) -> None:
         """Record notification in database"""
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("""
@@ -300,7 +300,7 @@ class TemperatureChecker:
             'default_mode': os.getenv('DEFAULT_MODE', 'cooling')
         }
     
-    def is_quiet_hours(self, current_time: datetime = None) -> bool:
+    def is_quiet_hours(self, current_time: Optional[datetime] = None) -> bool:
         """Check if current time is within quiet hours"""
         if current_time is None:
             current_time = self.time_provider.now()
@@ -317,7 +317,7 @@ class TemperatureChecker:
             return quiet_start <= time_only <= quiet_end
     
     def should_send_notification(self, notification_type: str, app_state: AppState, 
-                               current_time: datetime = None) -> bool:
+                               current_time: Optional[datetime] = None) -> bool:
         """Determine if we should send a notification based on current state"""
         if current_time is None:
             current_time = self.time_provider.now()
@@ -417,7 +417,7 @@ class TemperatureChecker:
         
         return success
     
-    def check_and_notify(self):
+    def check_and_notify(self) -> None:
         """Main logic to check temperature and send notifications"""
         logger.info("Starting temperature check...")
         
@@ -450,7 +450,7 @@ class TemperatureChecker:
         if notification_type and self.should_send_notification(notification_type, app_state):
             self.process_notification(notification_type, weather_data, app_state)
 
-def main():
+def main() -> None:
     try:
         checker = TemperatureChecker()
         checker.check_and_notify()
