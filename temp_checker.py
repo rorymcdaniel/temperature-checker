@@ -10,7 +10,7 @@ import json
 import requests
 import logging
 from datetime import datetime, time
-from typing import Optional, Tuple, Dict, Any, Protocol
+from typing import Optional, Tuple, Dict, Any, Protocol, Union
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
@@ -38,10 +38,29 @@ class WeatherData:
     daily_high: float
     daily_low: float
 
+@dataclass 
+class Config:
+    """Configuration class with proper types"""
+    db_path: str
+    zip_code: str
+    telegram_token: str
+    telegram_chat_id: str
+    close_windows_temp: float
+    open_windows_temp: float
+    forecast_high_threshold: float
+    heating_close_temp: float
+    heating_open_temp: float
+    heating_forecast_low_threshold: float
+    quiet_start_hour: int
+    quiet_start_minute: int
+    quiet_end_hour: int
+    quiet_end_minute: int
+    default_mode: str
+
 class DatabaseInterface(Protocol):
     """Protocol for database operations"""
     def init_database(self, schema_path: str) -> None: ...
-    def get_app_state(self) -> AppState: ...
+    def get_app_state(self, default_mode: str = 'cooling') -> AppState: ...
     def update_app_state(self, window_state: Optional[str] = None, mode: Optional[str] = None, 
                         last_notification_type: Optional[str] = None) -> None: ...
     def record_temperature(self, weather_data: WeatherData, zip_code: str) -> None: ...
@@ -127,7 +146,7 @@ class DatabaseAdapter:
             if updates:
                 updates.append("updated_at = ?")
                 params.append(datetime.now().isoformat())
-                params.append(1)  # WHERE id = 1
+                params.append("1")  # WHERE id = 1
                 
                 query = f"UPDATE app_state SET {', '.join(updates)} WHERE id = ?"
                 conn.execute(query, params)
@@ -190,8 +209,8 @@ class WeatherAdapter:
         
         url = "https://api.open-meteo.com/v1/forecast"
         params = {
-            'latitude': lat,
-            'longitude': lon,
+            'latitude': str(lat),
+            'longitude': str(lon),
             'current': 'temperature_2m',
             'daily': 'temperature_2m_max,temperature_2m_min',
             'temperature_unit': 'fahrenheit',
@@ -254,11 +273,11 @@ class TimeAdapter:
 
 class TemperatureChecker:
     def __init__(self, 
-                 database: DatabaseInterface = None,
-                 weather: WeatherInterface = None,
-                 notification: NotificationInterface = None,
-                 time_provider: TimeInterface = None,
-                 config: Dict[str, Any] = None):
+                 database: Optional[DatabaseInterface] = None,
+                 weather: Optional[WeatherInterface] = None,
+                 notification: Optional[NotificationInterface] = None,
+                 time_provider: Optional[TimeInterface] = None,
+                 config: Optional[Config] = None):
         
         # Load environment variables if no config provided
         if config is None:
@@ -268,7 +287,7 @@ class TemperatureChecker:
         self.config = config
         
         # Use dependency injection or create default adapters
-        self.database = database or DatabaseAdapter(config['db_path'])
+        self.database = database or DatabaseAdapter(config.db_path)
         self.weather = weather or WeatherAdapter()
         self.notification = notification or TelegramAdapter()
         self.time_provider = time_provider or TimeAdapter()
@@ -280,25 +299,25 @@ class TemperatureChecker:
             # For tests, we might not have the schema file
             pass
     
-    def _load_config_from_env(self) -> Dict[str, Any]:
+    def _load_config_from_env(self) -> Config:
         """Load configuration from environment variables"""
-        return {
-            'db_path': os.getenv('DATABASE_PATH', 'temperature_checker.db'),
-            'zip_code': os.getenv('ZIP_CODE'),
-            'telegram_token': os.getenv('TELEGRAM_BOT_TOKEN'),
-            'telegram_chat_id': os.getenv('TELEGRAM_CHAT_ID'),
-            'close_windows_temp': float(os.getenv('CLOSE_WINDOWS_TEMP', '78')),
-            'open_windows_temp': float(os.getenv('OPEN_WINDOWS_TEMP', '76')),
-            'forecast_high_threshold': float(os.getenv('FORECAST_HIGH_THRESHOLD', '80')),
-            'heating_close_temp': float(os.getenv('HEATING_CLOSE_TEMP', '55')),
-            'heating_open_temp': float(os.getenv('HEATING_OPEN_TEMP', '65')),
-            'heating_forecast_low_threshold': float(os.getenv('HEATING_FORECAST_LOW_THRESHOLD', '70')),
-            'quiet_start_hour': int(os.getenv('QUIET_START_HOUR', '22')),
-            'quiet_start_minute': int(os.getenv('QUIET_START_MINUTE', '30')),
-            'quiet_end_hour': int(os.getenv('QUIET_END_HOUR', '7')),
-            'quiet_end_minute': int(os.getenv('QUIET_END_MINUTE', '0')),
-            'default_mode': os.getenv('DEFAULT_MODE', 'cooling')
-        }
+        return Config(
+            db_path=os.getenv('DATABASE_PATH', 'temperature_checker.db'),
+            zip_code=os.getenv('ZIP_CODE', ''),
+            telegram_token=os.getenv('TELEGRAM_BOT_TOKEN', ''),
+            telegram_chat_id=os.getenv('TELEGRAM_CHAT_ID', ''),
+            close_windows_temp=float(os.getenv('CLOSE_WINDOWS_TEMP', '78')),
+            open_windows_temp=float(os.getenv('OPEN_WINDOWS_TEMP', '76')),
+            forecast_high_threshold=float(os.getenv('FORECAST_HIGH_THRESHOLD', '80')),
+            heating_close_temp=float(os.getenv('HEATING_CLOSE_TEMP', '55')),
+            heating_open_temp=float(os.getenv('HEATING_OPEN_TEMP', '65')),
+            heating_forecast_low_threshold=float(os.getenv('HEATING_FORECAST_LOW_THRESHOLD', '70')),
+            quiet_start_hour=int(os.getenv('QUIET_START_HOUR', '22')),
+            quiet_start_minute=int(os.getenv('QUIET_START_MINUTE', '30')),
+            quiet_end_hour=int(os.getenv('QUIET_END_HOUR', '7')),
+            quiet_end_minute=int(os.getenv('QUIET_END_MINUTE', '0')),
+            default_mode=os.getenv('DEFAULT_MODE', 'cooling')
+        )
     
     def is_quiet_hours(self, current_time: Optional[datetime] = None) -> bool:
         """Check if current time is within quiet hours"""
@@ -307,8 +326,8 @@ class TemperatureChecker:
         
         time_only = current_time.time()
         
-        quiet_start = time(self.config['quiet_start_hour'], self.config['quiet_start_minute'])
-        quiet_end = time(self.config['quiet_end_hour'], self.config['quiet_end_minute'])
+        quiet_start = time(self.config.quiet_start_hour, self.config.quiet_start_minute)
+        quiet_end = time(self.config.quiet_end_hour, self.config.quiet_end_minute)
         
         # Handle overnight quiet hours (e.g., 22:30 - 07:00)
         if quiet_start > quiet_end:
@@ -365,13 +384,13 @@ class TemperatureChecker:
         """Check cooling mode conditions and return notification type if needed"""
         # Close windows notification
         if (app_state.window_state == 'open' and 
-            weather_data.current_temp >= self.config['close_windows_temp'] and
-            weather_data.daily_high > self.config['forecast_high_threshold']):
+            weather_data.current_temp >= self.config.close_windows_temp and
+            weather_data.daily_high > self.config.forecast_high_threshold):
             return 'close_windows'
         
         # Open windows notification
         elif (app_state.window_state == 'closed' and 
-              weather_data.current_temp <= self.config['open_windows_temp']):
+              weather_data.current_temp <= self.config.open_windows_temp):
             return 'open_windows'
         
         return None
@@ -380,13 +399,13 @@ class TemperatureChecker:
         """Check heating mode conditions and return notification type if needed"""
         # Close windows notification (too cold)
         if (app_state.window_state == 'open' and 
-            weather_data.current_temp <= self.config['heating_close_temp']):
+            weather_data.current_temp <= self.config.heating_close_temp):
             return 'close_windows'
         
         # Open windows notification (warm enough)
         elif (app_state.window_state == 'closed' and 
-              weather_data.current_temp >= self.config['heating_open_temp'] and
-              weather_data.daily_high < self.config['heating_forecast_low_threshold']):
+              weather_data.current_temp >= self.config.heating_open_temp and
+              weather_data.daily_high < self.config.heating_forecast_low_threshold):
             return 'open_windows'
         
         return None
@@ -398,8 +417,8 @@ class TemperatureChecker:
         
         success = self.notification.send_message(
             message, 
-            self.config['telegram_token'], 
-            self.config['telegram_chat_id']
+            self.config.telegram_token, 
+            self.config.telegram_chat_id
         )
         
         self.database.record_notification(
@@ -422,16 +441,16 @@ class TemperatureChecker:
         logger.info("Starting temperature check...")
         
         # Fetch weather data
-        weather_data = self.weather.fetch_weather_data(self.config['zip_code'])
+        weather_data = self.weather.fetch_weather_data(self.config.zip_code)
         if not weather_data:
             logger.error("Failed to fetch weather data")
             return
         
         # Record temperature
-        self.database.record_temperature(weather_data, self.config['zip_code'])
+        self.database.record_temperature(weather_data, self.config.zip_code)
         
         # Get current app state
-        app_state = self.database.get_app_state(self.config['default_mode'])
+        app_state = self.database.get_app_state(self.config.default_mode)
         
         logger.info(f"Current temp: {weather_data.current_temp}°F, "
                    f"High: {weather_data.daily_high}°F, "

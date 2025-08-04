@@ -9,7 +9,7 @@ import tempfile
 from unittest.mock import patch, Mock
 from datetime import datetime
 
-from temp_checker_refactored import TemperatureChecker, DatabaseAdapter, WeatherData
+from temp_checker import TemperatureChecker, DatabaseAdapter, WeatherData, Config
 
 
 class TestIntegration:
@@ -23,23 +23,23 @@ class TestIntegration:
         self.temp_db.close()
         
         # Create test configuration
-        self.test_config = {
-            'db_path': self.temp_db_path,
-            'zip_code': '10001',
-            'telegram_token': 'test_token',
-            'telegram_chat_id': 'test_chat_id',
-            'close_windows_temp': 78.0,
-            'open_windows_temp': 76.0,
-            'forecast_high_threshold': 80.0,
-            'heating_close_temp': 55.0,
-            'heating_open_temp': 65.0,
-            'heating_forecast_low_threshold': 70.0,
-            'quiet_start_hour': 22,
-            'quiet_start_minute': 30,
-            'quiet_end_hour': 7,
-            'quiet_end_minute': 0,
-            'default_mode': 'cooling'
-        }
+        self.test_config = Config(
+            db_path=self.temp_db_path,
+            zip_code='10001',
+            telegram_token='test_token',
+            telegram_chat_id='test_chat_id',
+            close_windows_temp=78.0,
+            open_windows_temp=76.0,
+            forecast_high_threshold=80.0,
+            heating_close_temp=55.0,
+            heating_open_temp=65.0,
+            heating_forecast_low_threshold=70.0,
+            quiet_start_hour=22,
+            quiet_start_minute=30,
+            quiet_end_hour=7,
+            quiet_end_minute=0,
+            default_mode='cooling'
+        )
         
         # Initialize real database with schema
         self.database = DatabaseAdapter(self.temp_db_path)
@@ -95,8 +95,8 @@ class TestIntegration:
             conn.executescript(schema)
             conn.commit()
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
-    @patch('temp_checker_refactored.TelegramAdapter.send_message')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.TelegramAdapter.send_message')
     def test_complete_cooling_close_windows_flow(self, mock_telegram, mock_weather):
         """Test complete flow for cooling mode close windows notification"""
         # Setup mocks
@@ -128,8 +128,8 @@ class TestIntegration:
         assert 'Close Windows' in message
         assert '78.0°F' in message
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
-    @patch('temp_checker_refactored.TelegramAdapter.send_message')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.TelegramAdapter.send_message')
     def test_complete_cooling_open_windows_flow(self, mock_telegram, mock_weather):
         """Test complete flow for cooling mode open windows notification"""
         # Setup mocks
@@ -159,8 +159,8 @@ class TestIntegration:
         assert '🌬️' in message
         assert 'Open Windows' in message
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
-    @patch('temp_checker_refactored.TelegramAdapter.send_message')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.TelegramAdapter.send_message')
     def test_complete_heating_close_windows_flow(self, mock_telegram, mock_weather):
         """Test complete flow for heating mode close windows notification"""
         # Setup mocks
@@ -191,8 +191,8 @@ class TestIntegration:
         assert '🥶' in message
         assert 'heat' in message
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
-    @patch('temp_checker_refactored.TelegramAdapter.send_message')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.TelegramAdapter.send_message')
     def test_complete_heating_open_windows_flow(self, mock_telegram, mock_weather):
         """Test complete flow for heating mode open windows notification"""
         # Setup mocks
@@ -223,8 +223,8 @@ class TestIntegration:
         assert '☀️' in message
         assert 'warm' in message
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
-    @patch('temp_checker_refactored.TelegramAdapter.send_message')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.TelegramAdapter.send_message')
     def test_temperature_recording(self, mock_telegram, mock_weather):
         """Test that temperature data is properly recorded"""
         # Setup mocks
@@ -255,8 +255,8 @@ class TestIntegration:
             assert row[2] == 66.0
             assert row[3] == '10001'
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
-    @patch('temp_checker_refactored.TelegramAdapter.send_message')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.TelegramAdapter.send_message')
     def test_notification_recording_success(self, mock_telegram, mock_weather):
         """Test that successful notifications are properly recorded"""
         # Setup mocks
@@ -290,8 +290,8 @@ class TestIntegration:
             assert row[2] == 1  # True
             assert '🌡️' in row[3]
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
-    @patch('temp_checker_refactored.TelegramAdapter.send_message')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.TelegramAdapter.send_message')
     def test_notification_recording_failure(self, mock_telegram, mock_weather):
         """Test that failed notifications are properly recorded"""
         # Setup mocks
@@ -328,8 +328,8 @@ class TestIntegration:
         assert app_state.window_state == 'open'  # Should remain open
         assert app_state.last_notification_type is None
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
-    @patch('temp_checker_refactored.TelegramAdapter.send_message')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.TelegramAdapter.send_message')
     def test_quiet_hours_blocking(self, mock_telegram, mock_weather):
         """Test that notifications are blocked during quiet hours"""
         # Setup mocks
@@ -363,8 +363,8 @@ class TestIntegration:
             count = cursor.fetchone()[0]
             assert count > 0
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
-    @patch('temp_checker_refactored.TelegramAdapter.send_message')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.TelegramAdapter.send_message')
     def test_duplicate_notification_blocking(self, mock_telegram, mock_weather):
         """Test that duplicate notifications within 30 minutes are blocked"""
         # Setup mocks
@@ -402,7 +402,7 @@ class TestIntegration:
         # Verify no notification was sent due to recent duplicate
         mock_telegram.assert_not_called()
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
     def test_no_weather_data_handling(self, mock_weather):
         """Test handling when weather data is unavailable"""
         # Setup mock to return None
@@ -424,8 +424,8 @@ class TestIntegration:
             count = cursor.fetchone()[0]
             assert count == 0
     
-    @patch('temp_checker_refactored.WeatherAdapter.fetch_weather_data')
-    @patch('temp_checker_refactored.TelegramAdapter.send_message')
+    @patch('temp_checker.WeatherAdapter.fetch_weather_data')
+    @patch('temp_checker.TelegramAdapter.send_message')
     def test_mode_switching_persistence(self, mock_telegram, mock_weather):
         """Test that mode changes persist and affect logic correctly"""
         # Setup for cooling mode first

@@ -9,9 +9,9 @@ from unittest.mock import Mock, MagicMock, patch
 from datetime import datetime, time
 from typing import Dict, Any
 
-from temp_checker_refactored import (
+from temp_checker import (
     TemperatureChecker, DatabaseAdapter, WeatherAdapter, TelegramAdapter, TimeAdapter,
-    AppState, WeatherData
+    AppState, WeatherData, Config
 )
 
 
@@ -155,7 +155,7 @@ class TestWeatherAdapter:
         """Setup test environment"""
         self.weather_adapter = WeatherAdapter()
     
-    @patch('temp_checker_refactored.requests.get')
+    @patch('temp_checker.requests.get')
     def test_get_coordinates_from_zip_success(self, mock_get):
         """Test successful coordinate retrieval"""
         mock_response = Mock()
@@ -169,7 +169,7 @@ class TestWeatherAdapter:
         assert lat == 40.7128
         assert lon == -74.0060
     
-    @patch('temp_checker_refactored.requests.get')
+    @patch('temp_checker.requests.get')
     def test_get_coordinates_from_zip_failure(self, mock_get):
         """Test failed coordinate retrieval"""
         mock_response = Mock()
@@ -180,7 +180,7 @@ class TestWeatherAdapter:
         assert lat == 0.0
         assert lon == 0.0
     
-    @patch('temp_checker_refactored.requests.get')
+    @patch('temp_checker.requests.get')
     def test_get_coordinates_from_zip_exception(self, mock_get):
         """Test coordinate retrieval with exception"""
         mock_get.side_effect = Exception("Network error")
@@ -190,7 +190,7 @@ class TestWeatherAdapter:
         assert lon == 0.0
     
     @patch.object(WeatherAdapter, 'get_coordinates_from_zip')
-    @patch('temp_checker_refactored.requests.get')
+    @patch('temp_checker.requests.get')
     def test_fetch_weather_data_success(self, mock_get, mock_coordinates):
         """Test successful weather data fetch"""
         mock_coordinates.return_value = (40.7128, -74.0060)
@@ -226,7 +226,7 @@ class TestWeatherAdapter:
         assert weather_data is None
     
     @patch.object(WeatherAdapter, 'get_coordinates_from_zip')
-    @patch('temp_checker_refactored.requests.get')
+    @patch('temp_checker.requests.get')
     def test_fetch_weather_data_api_error(self, mock_get, mock_coordinates):
         """Test weather data fetch with API error"""
         mock_coordinates.return_value = (40.7128, -74.0060)
@@ -246,7 +246,7 @@ class TestTelegramAdapter:
         """Setup test environment"""
         self.telegram_adapter = TelegramAdapter()
     
-    @patch('temp_checker_refactored.requests.post')
+    @patch('temp_checker.requests.post')
     def test_send_message_success(self, mock_post):
         """Test successful message sending"""
         mock_response = Mock()
@@ -258,7 +258,7 @@ class TestTelegramAdapter:
         )
         assert result is True
     
-    @patch('temp_checker_refactored.requests.post')
+    @patch('temp_checker.requests.post')
     def test_send_message_failure(self, mock_post):
         """Test failed message sending"""
         mock_response = Mock()
@@ -278,7 +278,7 @@ class TestTelegramAdapter:
         result = self.telegram_adapter.send_message('Test message', 'token', None)
         assert result is False
     
-    @patch('temp_checker_refactored.requests.post')
+    @patch('temp_checker.requests.post')
     def test_send_message_exception(self, mock_post):
         """Test sending message with exception"""
         mock_post.side_effect = Exception("Network error")
@@ -314,23 +314,23 @@ class TestTemperatureChecker:
         self.mock_notification = Mock()
         self.mock_time = Mock()
         
-        self.test_config = {
-            'db_path': ':memory:',
-            'zip_code': '10001',
-            'telegram_token': 'test_token',
-            'telegram_chat_id': 'test_chat_id',
-            'close_windows_temp': 78.0,
-            'open_windows_temp': 76.0,
-            'forecast_high_threshold': 80.0,
-            'heating_close_temp': 55.0,
-            'heating_open_temp': 65.0,
-            'heating_forecast_low_threshold': 70.0,
-            'quiet_start_hour': 22,
-            'quiet_start_minute': 30,
-            'quiet_end_hour': 7,
-            'quiet_end_minute': 0,
-            'default_mode': 'cooling'
-        }
+        self.test_config = Config(
+            db_path=':memory:',
+            zip_code='10001',
+            telegram_token='test_token',
+            telegram_chat_id='test_chat_id',
+            close_windows_temp=78.0,
+            open_windows_temp=76.0,
+            forecast_high_threshold=80.0,
+            heating_close_temp=55.0,
+            heating_open_temp=65.0,
+            heating_forecast_low_threshold=70.0,
+            quiet_start_hour=22,
+            quiet_start_minute=30,
+            quiet_end_hour=7,
+            quiet_end_minute=0,
+            default_mode='cooling'
+        )
         
         self.checker = TemperatureChecker(
             database=self.mock_database,
@@ -635,27 +635,27 @@ class TestTemperatureChecker:
 class TestMainFunction:
     """Test cases for the main function"""
     
-    @patch('temp_checker_refactored.TemperatureChecker')
+    @patch('temp_checker.TemperatureChecker')
     def test_main_success(self, mock_checker_class):
         """Test successful main function execution"""
         mock_checker = Mock()
         mock_checker_class.return_value = mock_checker
         
-        from temp_checker_refactored import main
+        from temp_checker import main
         main()
         
         mock_checker_class.assert_called_once()
         mock_checker.check_and_notify.assert_called_once()
     
-    @patch('temp_checker_refactored.TemperatureChecker')
-    @patch('temp_checker_refactored.logger')
+    @patch('temp_checker.TemperatureChecker')
+    @patch('temp_checker.logger')
     def test_main_exception_handling(self, mock_logger, mock_checker_class):
         """Test main function exception handling"""
         mock_checker = Mock()
         mock_checker.check_and_notify.side_effect = Exception("Test error")
         mock_checker_class.return_value = mock_checker
         
-        from temp_checker_refactored import main
+        from temp_checker import main
         
         with pytest.raises(Exception):
             main()
