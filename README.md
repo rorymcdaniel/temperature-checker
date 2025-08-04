@@ -183,3 +183,30 @@ All thresholds and settings are configurable via the `.env` file. You can adjust
 - Database file location
 
 The 10-minute cron interval is recommended but can be adjusted based on your needs.
+
+## Development
+
+### Type Checking
+
+This project uses mypy for static type checking. Before submitting PRs, ensure mypy passes:
+
+```bash
+poetry run mypy temp_checker.py set_window_state.py
+```
+
+### Running Tests
+
+Run the full test suite with coverage:
+
+```bash
+poetry run pytest
+```
+
+### Pre-commit Hooks
+
+Install pre-commit hooks to automatically run type checking and tests:
+
+```bash
+pip install pre-commit
+pre-commit install
+```

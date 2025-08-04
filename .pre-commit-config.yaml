@@ -1,0 +1,17 @@
+repos:
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: poetry run mypy
+        language: system
+        files: \.py$
+        args: [temp_checker.py, set_window_state.py]
+        pass_filenames: false
+      - id: pytest
+        name: pytest
+        entry: poetry run pytest
+        language: system
+        files: \.py$
+        pass_filenames: false
+        stages: [commit]
