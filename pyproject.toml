@@ -2,8 +2,9 @@
 name = "temperature-checker"
 version = "0.1.0"
 description = "Monitor outdoor temperature and send Telegram notifications for opening/closing windows"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Rory McDaniel"]
 readme = "README.md"
+license = "MIT"
 package-mode = false
 
 [tool.poetry.dependencies]

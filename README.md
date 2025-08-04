@@ -1,5 +1,7 @@
 # Temperature Checker
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A Python application that monitors outdoor temperature and sends Telegram notifications for opening/closing windows based on configurable thresholds and seasonal modes.
 
 ## Features
