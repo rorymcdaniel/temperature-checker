@@ -16,13 +16,31 @@ A Python application that monitors outdoor temperature and sends Telegram notifi
 
 ## Setup
 
-### 1. Install Dependencies
+### 1. Install Poetry (if not already installed)
+
+This project uses Poetry for dependency management and virtual environments:
 
 ```bash
-pip install -r requirements.txt
+# Install Poetry (if not already installed)
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Or using pip
+pip install poetry
 ```
 
-### 2. Configure Environment
+### 2. Install Dependencies and Setup Virtual Environment
+
+```bash
+# Install all dependencies and create virtual environment
+poetry install
+
+# Activate the virtual environment (optional - Poetry handles this automatically)
+poetry env activate
+```
+
+**Note**: Poetry automatically creates and manages a virtual environment for this project. All commands should be run with `poetry run` prefix (e.g., `poetry run python temp_checker.py`) or from within the activated environment.
+
+### 3. Configure Environment
 
 Copy the example environment file and configure your settings:
 
@@ -60,7 +78,7 @@ QUIET_END_MINUTE=0
 DEFAULT_MODE=cooling
 ```
 
-### 3. Telegram Bot Setup
+### 4. Telegram Bot Setup
 
 1. Create a new bot by messaging [@BotFather](https://t.me/botfather) on Telegram
 2. Use `/newbot` command and follow instructions
@@ -69,12 +87,12 @@ DEFAULT_MODE=cooling
 5. Get your chat ID by visiting: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
 6. Copy the chat ID to your `.env` file
 
-### 4. Initialize Database
+### 5. Initialize Database
 
 The database will be automatically initialized on first run:
 
 ```bash
-python temp_checker.py
+poetry run python temp_checker.py
 ```
 
 ## Usage
@@ -84,7 +102,7 @@ python temp_checker.py
 Run the temperature checker once:
 
 ```bash
-python temp_checker.py
+poetry run python temp_checker.py
 ```
 
 ### Automated Execution (Recommended)
@@ -98,7 +116,7 @@ crontab -e
 Add this line (adjust path as needed):
 
 ```bash
-*/10 * * * * cd /path/to/temperature-checker && /usr/bin/python3 temp_checker.py
+*/10 * * * * cd /path/to/temperature-checker && poetry run python temp_checker.py
 ```
 
 ### Manual State Management
@@ -107,18 +125,18 @@ Use the utility script to manually adjust settings:
 
 ```bash
 # Show current status
-python set_window_state.py status
+poetry run python set_window_state.py status
 
 # Set window state
-python set_window_state.py open
-python set_window_state.py closed
+poetry run python set_window_state.py open
+poetry run python set_window_state.py closed
 
 # Change mode
-python set_window_state.py mode cooling
-python set_window_state.py mode heating
+poetry run python set_window_state.py mode cooling
+poetry run python set_window_state.py mode heating
 
 # Reset notification state (allows immediate notifications)
-python set_window_state.py reset
+poetry run python set_window_state.py reset
 ```
 
 ## How It Works
@@ -145,13 +163,29 @@ The application uses SQLite with three main tables:
 - `temperature_readings`: Historical temperature and forecast data
 - `notifications`: Log of all notifications sent
 
+### Alternative Command Execution
+
+If you prefer to work within the activated virtual environment:
+
+```bash
+# Option 1: Activate the Poetry virtual environment (Poetry 2.0+)
+poetry env activate
+
+# Option 2: Get the virtual environment path and activate manually
+source $(poetry env info --path)/bin/activate
+
+# Now you can run commands directly without 'poetry run' prefix
+python temp_checker.py
+python set_window_state.py status
+```
+
 ## Files
 
 - `temp_checker.py`: Main application
 - `set_window_state.py`: Utility for manual state management
 - `database_schema.sql`: Database initialization script
 - `.env.example`: Configuration template
-- `requirements.txt`: Python dependencies
+- `pyproject.toml`: Poetry configuration and dependencies
 
 ## Troubleshooting
 
@@ -164,7 +198,7 @@ tail -f temp_checker.log
 
 ### Verify Configuration
 ```bash
-python set_window_state.py status
+poetry run python set_window_state.py status
 ```
 
 ### Test Telegram Bot
