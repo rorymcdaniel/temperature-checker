@@ -1,4 +1,4 @@
-name: Tests and Type Checking
+name: Tests, Type Checking, and Linting
 
 on:
   pull_request:
@@ -38,6 +38,14 @@ jobs:
     - name: Run mypy type checking
       run: |
         poetry run mypy temp_checker.py set_window_state.py
+    
+    - name: Run Ruff linting
+      run: |
+        poetry run ruff check temp_checker.py set_window_state.py
+    
+    - name: Check Ruff formatting
+      run: |
+        poetry run ruff format --check temp_checker.py set_window_state.py
 
   test:
     runs-on: ubuntu-latest

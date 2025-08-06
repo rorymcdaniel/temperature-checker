@@ -220,10 +220,26 @@ The 10-minute cron interval is recommended but can be adjusted based on your nee
 
 ## Development
 
-### Type Checking
+### Code Quality
 
-This project uses mypy for static type checking. Before submitting PRs, ensure mypy passes:
+This project uses multiple tools to ensure code quality:
 
+#### Linting with Ruff
+```bash
+# Check for linting issues
+poetry run ruff check temp_checker.py set_window_state.py
+
+# Auto-fix issues where possible
+poetry run ruff check --fix temp_checker.py set_window_state.py
+
+# Check code formatting
+poetry run ruff format --check temp_checker.py set_window_state.py
+
+# Auto-format code
+poetry run ruff format temp_checker.py set_window_state.py
+```
+
+#### Type Checking with mypy
 ```bash
 poetry run mypy temp_checker.py set_window_state.py
 ```
